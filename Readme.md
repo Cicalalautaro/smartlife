@@ -1,6 +1,10 @@
-# ddsi-tp-template
+# SmartLife (DDSI — UTN BA)
 
-Plantilla base para el trabajo práctico de DDSI (UTN FRBA). Implementa una arquitectura de servicios con Spring Boot y una biblioteca compartida, usando un reactor de Maven multi-módulo.
+Implementación del caso práctico **SmartLife**. El alcance y las reglas de negocio del dominio siguen el enunciado oficial:
+
+[**[DDSI UTN BA] SmartLife — Caso práctico** (Google Docs)](https://docs.google.com/document/d/1N7W2UuWuqmDRuR1pTH5QtjBoojgJwH9_ujmGvih9fmA/edit?tab=t.0#heading=h.9alaamq85m85)
+
+El código de este repositorio está pensado para **respetar ese enunciado** (entidades, flujos y responsabilidades que allí se definen).
 
 ---
 
@@ -15,14 +19,13 @@ Plantilla base para el trabajo práctico de DDSI (UTN FRBA). Implementa una arqu
 ## Estructura del repositorio
 
 ```
-ddsi-tp-template/
-├── pom.xml                    # POM padre: versiones y dependencyManagement
-├── common-lib/                # Librería compartida (JAR), importada por los servicios
-├── donaciones-service/        # Servicio de donaciones — puerto 8080
-└── notificaciones-service/    # Cervicio de notificaciones — puerto 8081
+smartlife/
+├── pom.xml                 # POM padre: versiones y dependencyManagement
+├── common-lib/             # Librería compartida (JAR), disponible en el reactor
+└── sales-service/        # Servicio de ventas — puerto 8082 (ver application.yaml)
 ```
 
-Cada servicio es una aplicación Spring Boot independiente que declara `common-lib` como dependencia local del reactor.
+`common-lib` forma parte del reactor Maven; los builds Docker usan la raíz como contexto para resolver el POM padre y los módulos (`-pl sales-service -am`).
 
 ---
 
@@ -33,10 +36,10 @@ Cada servicio es una aplicación Spring Boot independiente que declara `common-l
 | Java                | 21            |
 | Spring Boot         | 4.0.5         |
 | Spring Cloud BOM    | 2025.1.1      |
-| Lombok              | 1.18.34       |
+| Lombok              | 1.18.42       |
 | Maven               | 3.9+          |
 
-El BOM de Spring Cloud está declarado en el POM padre para que los módulos puedan incorporar dependencias de Spring Cloud sin especificar versión explícita.
+El BOM de Spring Cloud está declarado en el POM padre para que los módulos puedan incorporar dependencias de Spring Cloud sin fijar versión en cada uno.
 
 ---
 
@@ -50,48 +53,41 @@ Todos los comandos se ejecutan desde la **raíz del proyecto**.
 mvn clean install
 ```
 
-Esto construye `common-lib` primero y luego los servicios que dependen de ella.
+Esto construye `common-lib` y luego `sales-service` según el orden del reactor.
 
-### Ejecutar un servicio
+### Ejecutar el servicio de ventas
 
 ```bash
-# Servicio de donaciones (puerto 8080)
-mvn spring-boot:run -pl donaciones-service
-
-# Servicio de notificaciones (puerto 8081)
-mvn spring-boot:run -pl notificaciones-service
+mvn spring-boot:run -pl sales-service
 ```
 
-Maven resuelve `common-lib` directamente desde el reactor, por lo que no hace falta instalarla por separado si se ejecuta desde la raíz.
+El puerto por defecto está definido en `sales-service/src/main/resources/application.yaml` (8082).
 
 ---
 
 ## Construcción de imágenes Docker
 
-Este proyecto utiliza una arquitectura multi-módulo de Maven. Los microservicios dependen del `pom.xml` padre y de `common-lib`, por lo que **el contexto de construcción de Docker siempre debe ser la raíz del proyecto**. Si se limita el contexto a la carpeta del microservicio, Maven fallará al no encontrar el POM padre ni las dependencias comunes.
+El proyecto es multi-módulo Maven. **El contexto de construcción debe ser la raíz del repositorio**; si se limita a la carpeta del servicio, Maven no encontrará el POM padre ni el resto del reactor.
 
 ### Construcción manual (CLI)
 
-Posicionarse en la carpeta raíz del proyecto y pasar el Dockerfile con `-f`, dejando `.` como contexto:
+Desde la raíz del proyecto, usando el Dockerfile del servicio con `-f` y contexto `.`:
 
 ```bash
-# donaciones-service (expone el puerto 8080)
-docker build -t donaciones-img -f donaciones-service/Dockerfile .
-
-# notificaciones-service (expone el puerto 8081)
-docker build -t notificaciones-img -f notificaciones-service/Dockerfile .
+docker build -t sales-service-img -f sales-service/Dockerfile .
 ```
 
-### Ejecutar los contenedores
+### Ejecutar el contenedor
+
+Ajustá el mapeo de puertos al que exponga la aplicación dentro del contenedor (en `application.yaml` está **8082**):
 
 ```bash
-docker run -p 8080:8080 donaciones-img
-docker run -p 8081:8081 notificaciones-img
+docker run -p 8082:8082 sales-service-img
 ```
 
 ### Nota sobre `ARG SERVICE_NAME`
 
-Cada Dockerfile define un `ARG SERVICE_NAME` cuyo valor por defecto ya coincide con el nombre del servicio (p. ej. `donaciones-service`). Solo es necesario sobreescribirlo si se reutiliza un Dockerfile genérico para construir un servicio diferente:
+El Dockerfile define `ARG SERVICE_NAME` (por defecto `sales-service`). Solo hace falta sobreescribirlo si reutilizás el mismo patrón de build para otro módulo:
 
 ```bash
 docker build --build-arg SERVICE_NAME=otro-service -f otro-service/Dockerfile .
@@ -101,4 +97,4 @@ docker build --build-arg SERVICE_NAME=otro-service -f otro-service/Dockerfile .
 
 ## Estado del proyecto
 
-Los servicios son aplicaciones Spring Boot mínimas, listas para extender con controladores, repositorios y lógica de negocio. `common-lib` contiene el código compartido entre servicios.
+`sales-service` concentra el dominio de ventas alineado al enunciado SmartLife (comercio, productos, ventas, impuestos, observadores, etc.). `common-lib` está preparada para código compartido entre servicios a medida que el trabajo práctico lo requiera.
