@@ -1,0 +1,78 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+class Comercio {
+    id : Long
+    ventas : Venta[]
+    productos : Producto[]
+}
+
+class Producto{
+    - nombre : String
+    - precioBase : Number
+    - tipoProducto : TipoProducto
+
+    + precioFinal() : Number
+    + totalImpuetos() : Number
+}
+
+class TipoProducto {
+    - nombre : String
+    - impuestos : Impuesto[]
+}
+
+interface Impuesto{
+    + aplicarSobre(producto : Producto) : Number
+}
+
+class IVA implements Impuesto {
+    + aplicarSobre(producto : Producto) : Number
+}
+
+class EO implements Impuesto {
+    + aplicarSobre(producto : Producto) : Number
+}
+
+class EI implements Impuesto {
+    + aplicarSobre(producto : Producto) : Number
+}
+
+Comercio ->"*" Producto
+Producto -> TipoProducto
+TipoProducto ->"*" Impuesto
+
+
+class Venta{
+    - id : Long
+    - items : Item[]
+    - fecha : Date
+
+    + montoAPagar() : Number
+}
+
+class Item{
+    - producto : Pruducto
+    - cantidad : Number
+
+    + precioTotal() : Number
+}
+
+Venta ->"*" Item
+Item -> Producto
+Comercio -->"*" Venta
+
+interface Observador {
+    + corroborar(venta : Venta) : void
+}
+
+Observador "*"-->"*" Venta
+
+class SFFA implements Observador {
+    + corroborar(venta : Venta) : void
+}
+
+class SVIBAA  implements Observador {
+    + corroborar(venta : Venta) : void
+}
+
+@enduml
